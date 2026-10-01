@@ -9,6 +9,10 @@ import org.example.shareit.Item.FeedBack.FeedBack;
 import org.example.shareit.Item.FeedBack.FeedBackDTO;
 import org.example.shareit.Item.FeedBack.FeedbackRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -16,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -24,6 +29,7 @@ public class ItemService {
     ItemRepository itemRepository;
     BookingRepository bookingRepository;
     FeedbackRepository feedbackRepository;
+    RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
     public ItemService(ItemRepository itemRepository,FeedbackRepository feedbackRepository) {
@@ -31,12 +37,15 @@ public class ItemService {
         this.feedbackRepository=feedbackRepository;
     }
 
+
+    @CachePut(value="items",key="#result.id")
     public Item createItem(ItemDTO itemDTO, int ownerId) {
         Item item = itemDTO.convertToItem();
         item.setOwnerId(ownerId);
         return itemRepository.save(item);
     }
 
+    @Cacheable(value="items",key="#itemId")
     public ItemDTO getItemById(int itemId) throws ItemNotExistsException {
         Item item=itemRepository.findById(itemId);
         if(item==null)
@@ -71,6 +80,7 @@ public class ItemService {
         return itemsWithBookingDates;
     }
 
+    @CacheEvict(value="items", key="#itemId")
     public void deleteItemById(int itemId) throws ItemNotExistsException {
         if (itemRepository.existsById(itemId)) {
             itemRepository.deleteById(itemId);
@@ -81,6 +91,7 @@ public class ItemService {
         }
     }
 
+    @CachePut(value="items",key="#result.id")
     public Item updateItem(ItemDTO itemDTO, int itemId, int ownerId) throws ItemNotExistsException, WrongOwnerException {
         Item item=itemRepository.findById(itemId);
 
@@ -115,7 +126,7 @@ public class ItemService {
         return items;
     }
 
-    public Map.Entry<LocalDate, LocalDate> getLastBookingDate(int itemId){
+    private Map.Entry<LocalDate, LocalDate> getLastBookingDate(int itemId){
         List<Booking> bookings=bookingRepository.findAllByItemId(itemId);
 
         LocalDate lastBookingDate=bookings.get(0).getEndDate();
@@ -133,7 +144,7 @@ public class ItemService {
 
     }
 
-    public Map.Entry<LocalDate, LocalDate> getNearestNextBookingDate(int itemId){
+    private Map.Entry<LocalDate, LocalDate> getNearestNextBookingDate(int itemId){
         List<Booking> bookings=bookingRepository.findAllByItemId(itemId);
 
         LocalDate nearestBookingDate =bookings.get(0).getStartDate();
@@ -151,6 +162,8 @@ public class ItemService {
 
     }
 
+    @CachePut(value="feedbacksById", key="#result.id")
+    @CacheEvict(value="feedbacksByItem", key="#result.itemId")
     public FeedBack addFeedback(int userId, FeedBackDTO feedBackDTO)
     {
         FeedBack feedback=new FeedBack();
@@ -161,12 +174,23 @@ public class ItemService {
         return feedbackRepository.save(feedback);
     }
 
-    public List<FeedBack> getItemFeedbacks(int itemId)
-    {
-        List<FeedBack> feedbacks=feedbackRepository.findAllByItemId(itemId);
+    @Cacheable(value="feedbacksByItem", key="#itemId")
+    public List<FeedBack> getItemFeedbacks(int itemId) {
+        List<FeedBack> feedbacks = feedbackRepository.findAllByItemId(itemId);
         return feedbacks;
     }
 
+    private void cacheItem(Item item)
+    {
+        redisTemplate.opsForValue().set("itemId:"+item.getId(),item,5, TimeUnit.MINUTES);
+    }
 
+    private boolean checkItemCached(int itemId)
+    {
+        Item item= (Item) redisTemplate.opsForValue().get("itemId:"+itemId);
+        if(item==null)
+            return false;
+        return true; // доделать кэш
+    }
 
 }

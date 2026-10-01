@@ -8,6 +8,9 @@ import org.example.shareit.Item.Item;
 import org.example.shareit.Item.ItemRepository;
 import org.example.shareit.Item.ItemStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -28,6 +31,7 @@ public class BookingService {
         this.itemRepository = itemRepository;
     }
 
+    @Cacheable(value="bookings", key="#bookingId")
     public Booking getBooking(int bookingId, int userId) {
         Booking booking = bookingRepository.findById(bookingId);
         if (booking == null) {
@@ -37,15 +41,20 @@ public class BookingService {
         return booking;
     }
 
+    @CachePut(value="bookings", key="#result.bookingID")
+    @CacheEvict(cacheNames = {"bookingsByUser","bookingsByOwner"}, allEntries = true)
     public Booking createBooking(Booking booking, int userId) throws BookingRequestAlreadyExistsException {
         if(bookingRepository.existsByItemIdAndUserId(booking.getItemId(),userId)) {
             throw new BookingRequestAlreadyExistsException(userId,booking.getItemId());
         }
+
         booking.setUserId(userId);
         booking.setStatus(BookingStatus.WAITING);
+
         return bookingRepository.save(booking);
     }
 
+    @CachePut(value = "bookings", key="#result.bookingID")
     public Booking updateBooking(int bookingId, Booking booking) {
         Booking bookingToUpdate = bookingRepository.findById(bookingId);
         if (bookingToUpdate == null) {
@@ -54,7 +63,8 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
-    public List<Booking> getOwnerItemsBookings(int ownerId, String state) {// доделать
+    @Cacheable(value="bookingForOwner", key="#ownerId")
+    public List<Booking> getOwnerItemsBookings(int ownerId, String state) {
         List<Integer> ownerItemsIds= itemRepository.findItemIdsByOwnerIdAndStatus(ownerId,ItemStatus.BOOKED);
         List<Booking> bookings = bookingRepository.findAllByItemIdIn(ownerItemsIds);
 
@@ -66,7 +76,8 @@ public class BookingService {
         return bookings;
     }
 
-    public List<Booking> getUserBookings(int userId, String state) { // тест
+    @Cacheable(value="bookingsByUser", key="#userId")
+    public List<Booking> getUserBookings(int userId, String state) {
         List<Booking> bookingList=bookingRepository.findAllByUserId(userId);
         if(state.equals("ALL")) {
             return bookingList;
@@ -84,6 +95,8 @@ public class BookingService {
         return bookingList;
     }
 
+    @CachePut(value="bookings", key="#bookingId")
+    @CacheEvict(cacheNames = {"bookingsByUser","bookingsByOwner"}, allEntries = true)
     public void approveBooking(int bookingId,
                                boolean approved,
                                int userId)
