@@ -30,5 +30,5 @@ public interface ItemRepository extends JpaRepository<Item, Integer> {
     List<Item> findItemsByIdIn(List<Integer> ids);
 
     List<Integer> findItemIdsByOwnerIdAndStatus(int ownerId, ItemStatus status);
-//    boolean existsByIdAndOwnerId(int ownerId);
+    boolean existsByOwnerId(int ownerId);
 }

@@ -45,6 +45,5 @@ public class Booking {
 
     @NonNull
     @Enumerated(EnumType.STRING)
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     BookingStatus status;
 }

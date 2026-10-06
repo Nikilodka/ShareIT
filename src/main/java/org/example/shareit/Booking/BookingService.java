@@ -34,6 +34,10 @@ public class BookingService {
     @Cacheable(value="bookings", key="#bookingId")
     public Booking getBooking(int bookingId, int userId) {
         Booking booking = bookingRepository.findById(bookingId);
+        if((booking.getUserId()!=userId) || (!(itemRepository.existsByOwnerId(userId))))
+        {
+            throw new WrongOwnerException(bookingId,userId);
+        }
         if (booking == null) {
             throw new NonExistingBookingException(bookingId);
         }
@@ -97,7 +101,7 @@ public class BookingService {
 
     @CachePut(value="bookings", key="#bookingId")
     @CacheEvict(cacheNames = {"bookingsByUser","bookingsByOwner"}, allEntries = true)
-    public void approveBooking(int bookingId,
+    public Booking approveBooking(int bookingId,
                                boolean approved,
                                int userId)
             throws NonExistingBookingException,
@@ -129,7 +133,8 @@ public class BookingService {
         if(approved) {
             booking.setStatus(BookingStatus.APPROVED);
         }
-        bookingRepository.save(booking);
+
+        return bookingRepository.save(booking);
     }
 
     private BookingStatus parseState(String state) {

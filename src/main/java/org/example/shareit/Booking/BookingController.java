@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @Slf4j
-public class BookingController { // сделать логику бронирвоания
+public class BookingController {
 
     BookingService bookingService;
 
@@ -27,7 +27,7 @@ public class BookingController { // сделать логику бронирво
 
     @GetMapping("/bookings/{bookingID}")
     public ResponseEntity<?> getBooking(@PathVariable int bookingID,
-                                     @RequestHeader int userID) {
+                                     @RequestHeader("X-User-Id") int userID) {
         try{
             Booking booking=bookingService.getBooking(bookingID, userID);
             log.info("Found booking with ID " + bookingID);
@@ -63,6 +63,7 @@ public class BookingController { // сделать логику бронирво
                                   @PathVariable boolean approved,
                                   @RequestHeader("X-Owner-Id") int ownerId) {
         try{
+            log.info("Approving Booking with ID " + bookingId);
             bookingService.approveBooking(bookingId, approved, ownerId);
             log.info("Approved Booking with ID " + bookingId);
             return new ResponseEntity(bookingService.getBooking(bookingId, ownerId), HttpStatus.OK);
@@ -83,7 +84,7 @@ public class BookingController { // сделать логику бронирво
     }
 
     @GetMapping("/bookings/owner?state={state}")
-    public List<Booking> getOwnerBookings(@RequestParam(defaultValue = "ALL") String state, // тест
+    public List<Booking> getOwnerBookings(@RequestParam(defaultValue = "ALL") String state,
                                          @RequestHeader("X-Owner-Id") int ownerID) {
         List<Booking> bookings = new ArrayList<Booking>();
         try
