@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,9 +48,9 @@ public class ItemController {
                            @RequestBody ItemDTO itemDto,
                            @PathVariable int itemId) {
         try{
-            Item item=itemService.updateItem(itemDto,itemId,ownerId);
-            log.info("Item updated: " + item.getId());
-            return new ResponseEntity<>(item, HttpStatus.OK);
+            ItemDTO itemDTO =itemService.updateItem(itemDto,itemId,ownerId);
+            log.info("Item updated: " + itemDTO.getId());
+            return new ResponseEntity<>(itemDTO, HttpStatus.OK);
         }
         catch(ItemNotExistsException e){
             log.error("Cannot update item: "+ e.getMessage());
@@ -66,9 +65,10 @@ public class ItemController {
     @GetMapping("/items/{itemId}")
     public ResponseEntity<?> getItem(@PathVariable int itemId) {
         try{
-           ItemDTO itemDto=itemService.getItemById(itemId);
-           log.info("Found item with id "+itemId);
-           return new ResponseEntity<>(itemDto, HttpStatus.OK);
+            log.info("Called getItem: " + itemId);
+            ItemDTO itemDto=itemService.getItemById(itemId);
+            log.info("Found item with id "+itemId);
+            return new ResponseEntity<>(itemDto, HttpStatus.OK);
         }
         catch(ItemNotExistsException e){
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
@@ -76,7 +76,7 @@ public class ItemController {
     }
 
     @GetMapping("/items")
-    public ResponseEntity<?> getAllOwnerItems(@RequestHeader("X-Sharer-User-Id") int sharerId) { // добавить вывод дат бронирования
+    public ResponseEntity<?> getAllOwnerItems(@RequestHeader("X-Sharer-User-Id") int sharerId) {
         try{
             HashMap<Item, Map.Entry<Map.Entry<LocalDate,LocalDate>,Map.Entry<LocalDate, LocalDate>>> ownerItems
                     =itemService.getAllOwnerItems(sharerId);

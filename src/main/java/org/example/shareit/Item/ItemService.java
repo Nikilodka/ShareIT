@@ -38,16 +38,20 @@ public class ItemService {
     }
 
 
-    @CachePut(value="items",key="#result.id")
     public Item createItem(ItemDTO itemDTO, int ownerId) {
         Item item = itemDTO.convertToItem();
         item.setOwnerId(ownerId);
-        return itemRepository.save(item);
+
+        Item savedItem = itemRepository.save(item);
+
+        return savedItem;
     }
 
     @Cacheable(value="items",key="#itemId")
     public ItemDTO getItemById(int itemId) throws ItemNotExistsException {
+        log.info("Called getItemById");
         Item item=itemRepository.findById(itemId);
+        log.info("getItemById: found item with id: "+itemId);
         if(item==null)
         {
             throw new ItemNotExistsException(itemId);
@@ -92,7 +96,7 @@ public class ItemService {
     }
 
     @CachePut(value="items",key="#result.id")
-    public Item updateItem(ItemDTO itemDTO, int itemId, int ownerId) throws ItemNotExistsException, WrongOwnerException {
+    public ItemDTO updateItem(ItemDTO itemDTO, int itemId, int ownerId) throws ItemNotExistsException, WrongOwnerException {
         Item item=itemRepository.findById(itemId);
 
         if(item==null)
@@ -111,7 +115,8 @@ public class ItemService {
         item.setId(itemId);
 
         itemRepository.save(item);
-        return item;
+
+        return item.convertToDTO();
     }
 
     public List<ItemSummary> findItemsByText(String text){

@@ -7,10 +7,15 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import org.springframework.data.annotation.Id;
 
 @Getter
 @Setter
 public class ItemDTO {
+
+    @Id
+    int id;
+
     @NotBlank
     @NonNull
     String name;
@@ -18,7 +23,6 @@ public class ItemDTO {
     @Size(min = 1, max = 255)
     String description;
 
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     String status;
 
     @JsonIgnore

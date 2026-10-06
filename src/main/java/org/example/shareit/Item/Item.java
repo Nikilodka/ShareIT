@@ -41,6 +41,7 @@ public class Item {
     {
         ItemDTO dto = new ItemDTO();
 
+        dto.setId(id);
         dto.setName(name);
         dto.setDescription(description);
         dto.setShareCount(shareCount);
