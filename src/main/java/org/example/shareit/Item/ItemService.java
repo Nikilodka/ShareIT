@@ -3,6 +3,7 @@ package org.example.shareit.Item;
 import lombok.extern.slf4j.Slf4j;
 import org.example.shareit.Booking.Booking;
 import org.example.shareit.Booking.BookingRepository;
+import org.example.shareit.Booking.Exceptions.WrongBookingUserException;
 import org.example.shareit.Item.Exceptions.ItemNotExistsException;
 import org.example.shareit.Item.Exceptions.WrongOwnerException;
 import org.example.shareit.Item.FeedBack.FeedBack;
@@ -29,7 +30,6 @@ public class ItemService {
     ItemRepository itemRepository;
     BookingRepository bookingRepository;
     FeedbackRepository feedbackRepository;
-    RedisTemplate<String, Object> redisTemplate;
 
     @Autowired
     public ItemService(ItemRepository itemRepository,FeedbackRepository feedbackRepository) {
@@ -171,6 +171,11 @@ public class ItemService {
     @CacheEvict(value="feedbacksByItem", key="#result.itemId")
     public FeedBack addFeedback(int userId, FeedBackDTO feedBackDTO)
     {
+        if(!checkUserBookedItem(userId, feedBackDTO.getItemId()))
+        {
+            throw new WrongBookingUserException(userId,feedBackDTO.getItemId());
+        }
+
         FeedBack feedback=new FeedBack();
         feedback.setUserId(userId);
         feedback.setItemId(feedBackDTO.getItemId());
@@ -185,17 +190,14 @@ public class ItemService {
         return feedbacks;
     }
 
-    private void cacheItem(Item item)
+    private boolean checkUserBookedItem(int userId, int itemId)
     {
-        redisTemplate.opsForValue().set("itemId:"+item.getId(),item,5, TimeUnit.MINUTES);
+        if (bookingRepository.existsByItemIdAndUserId(itemId,userId))
+        {
+            return true;
+        }
+        return false;
     }
 
-    private boolean checkItemCached(int itemId)
-    {
-        Item item= (Item) redisTemplate.opsForValue().get("itemId:"+itemId);
-        if(item==null)
-            return false;
-        return true; // доделать кэш
-    }
 
 }
